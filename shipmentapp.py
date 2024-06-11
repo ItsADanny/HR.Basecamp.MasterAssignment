@@ -113,10 +113,10 @@ def import_data(filename: str) -> [bool, str]:
     return_result = [False, ""]
     # Load the JSON data
     json_data = json_get_filedata(filename)
-    # Create a connection to the mysql database
-    db_conn = sqlite3.connect(database_filename)
     # Check if the JSON data load was succesfull
     if json_data[0]:
+        # Create a connection to the mysql database
+        db_conn = sqlite3.connect(database_filename)
         # Iterate through the data we retrieved from the JSON file
         for row in json_data[2]:
             # Get the basic data from the row and put it into the correct variables
@@ -134,9 +134,20 @@ def import_data(filename: str) -> [bool, str]:
             # Import the data from the rows: Origin, Destination and Vessel.
             # If the data for these is already known, then we just return their current ID from the database
             # Else we insert the data and return their newly created ID
-            origin_internal_id = import_data_port(row_origin)
-            destination_internal_id = import_data_port(row_destination)
-            vessel_internal_id = import_data_vessel(row_vessel)
+            origin_internal_id = import_data_port(db_conn, row_origin)
+            destination_internal_id = import_data_port(db_conn, row_destination)
+            vessel_internal_id = import_data_vessel(db_conn, row_vessel)
+
+            if origin_internal_id != -999999 and destination_internal_id != -999999 and vessel_internal_id != -999999:
+
+            else:
+                if origin_internal_id == -999999:
+                if destination_internal_id == -999999:
+                if vessel_internal_id == -999999:
+
+
+        # Commit the inserts to the database
+        db_conn.commit()
 
     # Send back the result of the import
     return return_result
@@ -157,7 +168,7 @@ def import_data_port(db_connection, port_info: dict) -> str:
     if search_result[0]:
         return search_result[1]
     else:
-        insert_result = db_insert_port(db_connection, port_id, port_code, port_name, port_alias, port_city, port_province, port_country)
+        insert_result = db_insert_port(db_connection, port_id, port_code, port_name, port_city, port_province, port_country)
         if insert_result[0]:
             return insert_result[1]
         else:
@@ -168,14 +179,70 @@ def import_data_port(db_connection, port_info: dict) -> str:
 def import_data_vessel(db_connection, vessel_info: dict) -> int:
     pass
 
-# This function will search the database to see if it is a port
-def db_search_port(db_conn, port_id):
+
+# This function will check if all the required tables exist and if they don't, will automatically create them
+def db_check_tables():
     pass
 
+
+# This function will search the database to see if the port already exists
+def db_search_port(db_conn, port_id) -> [bool, str]:
+    query = "SELECT ID FROM Port WHERE ID = ?"
+    cur = db_conn.execute(query, [port_id])
+    result = cur.fetchone()
+    if result is not None:
+        return [True, result]
+    else:
+        return [False, "Port not found"]
+
+
 # This function will insert a new port into the database
-def db_insert_port(db_conn, port_id: str, port_code: int, port_name: str, , ):
-    pass
+def db_insert_port(db_conn, port_id: str, port_code: int, port_name: str, port_city: str, port_province: str,
+                   port_country: str) -> [bool, str]:
+    # Preform the query in a Try-Except to handle errors when inserting data
+    # Any errors are reported back to the function that called this function so that we can
+    # get an overview of all the errors
+    try:
+        # Create the insert query
+        query = "INSERT INTO ports (id, code, name, city, province, country) VALUES (?, ?, ?, ?, ?, ?)"
+        # Execute the query and get the cursor
+        cur = db_conn.execute(query, [port_id, port_code, port_name, port_city, port_province, port_country])
+        # Get the ID of the last row we inserted
+        insert_id = cur.lastrowid
+        # Return a True when we did the insert and return it with the ID of our insert
+        return [True, insert_id]
+    except Exception as e:
+        # If there was any error when inserting,
+        # then pass a False back with the error for later display back to the user
+        return [False, str(e)]
+
+
+# This function will search the database to see if the vessel already exists
+def db_search_vessel(db_conn, vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build,
+                     vessel_gross, vessel_netto, vessel_length, vessel_beams) -> [bool, str]:
+    # Preform the query in a Try-Except to handle errors when inserting data
+    # Any errors are reported back to the function that called this function so that we can
+    # get an overview of all the errors
+    try:
+        # Create the insert query
+        query = ("INSERT INTO ports (imo, mmsi, name, country, type, build, gross, netto, length, beam) "
+                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        # Execute the query and get the cursor
+        cur = db_conn.execute(query, [vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build,
+                                      vessel_gross, vessel_netto, vessel_length, vessel_beams])
+        # Get the ID of the last row we inserted
+        insert_id = cur.lastrowid
+        # Return a True when we did the insert and return it with the ID of our insert
+        return [True, insert_id]
+    except Exception as e:
+        # If there was any error when inserting,
+        # then pass a False back with the error for later display back to the user
+        return [False, str(e)]
 
 
 if __name__ == "__main__":
+    # This function will check if the database exists,
+    # and will if not create the database file and all the required tables needed
+    db_check_tables()
+    # This function is for the main part of this application
     main()
