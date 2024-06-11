@@ -71,6 +71,7 @@ def print_menu():
     print("         A step into the world of cargo")
     print("================================================")
     print("[I] - Import data")
+    print("[R] - Reporter")
     print("------------------------------------------------")
     print("[Q] - Exit program")
     print("================================================")
@@ -108,16 +109,23 @@ def json_get_filedata(filename: str) -> [bool, str, dict]:
 
 
 # This function will import the data from the json file
-def import_data(filename: str) -> [bool, str]:
+def import_data(filename: str) -> [bool, dict]:
     # Predefine the result we are going to send back
-    return_result = [False, ""]
+    return_result = [False, {"total_records": 0, "succesfull_inserts": 0, "unsuccesfull_inserts": 0, "errors": list()}]
+    # Make a list that will temporarily store our internal_shipments_id's
+    # This will be used to see if everything went successfully
+    temp_list_internal_shipment_ids = list()
     # Load the JSON data
     json_data = json_get_filedata(filename)
     # Check if the JSON data load was succesfull
     if json_data[0]:
+        # Update our return dict with the number of records we are processing
+        return_result[1]["total_records"] = len(json_data[2])
         # Create a connection to the mysql database
         db_conn = sqlite3.connect(database_filename)
         # Iterate through the data we retrieved from the JSON file
+        print(f"json_data[2]: {len(json_data[2])}")
+
         for row in json_data[2]:
             # Get the basic data from the row and put it into the correct variables
             row_date = row["date"]
@@ -126,6 +134,7 @@ def import_data(filename: str) -> [bool, str]:
             row_distancenaut = row["distance_naut"]
             row_durationhours = row["duration_hours"]
             row_averagespeed = row["average_speed"]
+
             # Get the data for which we need to go a little bit further into the data
             row_origin = row["origin"]
             row_destination = row["destination"]
@@ -139,15 +148,43 @@ def import_data(filename: str) -> [bool, str]:
             vessel_internal_id = import_data_vessel(db_conn, row_vessel)
 
             if origin_internal_id != -999999 and destination_internal_id != -999999 and vessel_internal_id != -999999:
-
+                return_result[1]["succesfull_inserts"] += 1
             else:
-                if origin_internal_id == -999999:
-                if destination_internal_id == -999999:
-                if vessel_internal_id == -999999:
+                if origin_internal_id == "-999999":
+                    return_result[1]["unsuccesfull_inserts"] += 1
+                    return_result[1]["errors"].append(f"There was an error trying to insert/update port (origin) "
+                                                      f"[{row["origin"]["id"]}] for shipment "
+                                                      f"[{row["tracking_number"]}]")
+                if destination_internal_id == "-999999":
+                    return_result[1]["unsuccesfull_inserts"] += 1
+                    return_result[1]["succesfull_inserts"] += 1
+                    return_result[1]["errors"].append(f"There was an error trying to insert/update port (destination) "
+                                                      f"[{row["destination"]["id"]}] for shipment "
+                                                      f"[{row["tracking_number"]}]")
+                if vessel_internal_id == "-999999":
+                    return_result[1]["unsuccesfull_inserts"] += 1
+                    return_result[1]["errors"].append(f"There was an error trying to insert/update vessel "
+                                                      f"[{row["vessel"]["imo"]}] for shipment "
+                                                      f"[{row["tracking_number"]}]")
 
+            # Insert the shipment itself into the database
+            internal_shipment_id = db_insert_shipment(db_conn, row_trackingnumber, row_date, row_cargoweight,
+                                                      row_distancenaut, row_durationhours, row_averagespeed,
+                                                      "temo", "temp", "tepo")
 
-        # Commit the inserts to the database
-        db_conn.commit()
+            if internal_shipment_id != -999999:
+                temp_list_internal_shipment_ids.append(internal_shipment_id)
+            else:
+                return_result[1]["unsuccesfull_inserts"] += 1
+                return_result[1]["errors"].append(f"There was an error trying to insert/update vessel "
+                                                  f"[{row["vessel"]["imo"]}] for shipment [{row["tracking_number"]}]")
+
+        # Check if the amount of internal_shipment_id's is the same as the amount of records
+        if len(json_data[2]) == len(temp_list_internal_shipment_ids):
+            # Commit the inserts to the database
+            db_conn.commit()
+            # Update the return result to display that the data has been commited to the database
+            return_result[0] = True
 
     # Send back the result of the import
     return return_result
@@ -168,16 +205,41 @@ def import_data_port(db_connection, port_info: dict) -> str:
     if search_result[0]:
         return search_result[1]
     else:
-        insert_result = db_insert_port(db_connection, port_id, port_code, port_name, port_city, port_province, port_country)
+        insert_result = db_insert_port(db_connection, port_id, port_code, port_name,
+                                       port_city, port_province, port_country)
         if insert_result[0]:
             return insert_result[1]
         else:
-            return -999999
+            return "-999999"
 
 
 # This function will import the data for the vessel
 def import_data_vessel(db_connection, vessel_info: dict) -> int:
-    pass
+    # Retrieve all the required data from the dict and put it into the correct variables for these
+    vessel_imo = vessel_info["imo"]
+    vessel_mmsi = vessel_info["mmsi"]
+    vessel_country = vessel_info["country"]
+    vessel_name = vessel_info["name"]
+    vessel_type = vessel_info["type"]
+    vessel_build = vessel_info["build"]
+    vessel_gross = vessel_info["gross"]
+    vessel_netto = vessel_info["netto"]
+    vessel_length = vessel_info["size"].replace(" ", "").split("/")[0]
+    vessel_beam = vessel_info["size"].replace(" ", "").split("/")[1]
+
+    # Search the database to see if there is already a port with the same id, if so return its id
+    search_result = db_search_vessel(db_connection, vessel_imo)
+    # Check if the port is found
+    if search_result[0]:
+        return search_result[1]
+    else:
+        insert_result = db_insert_vessel(db_connection, vessel_imo, vessel_mmsi, vessel_name,
+                                         vessel_country, vessel_type, vessel_build,
+                                         vessel_gross, vessel_netto, vessel_length, vessel_beam)
+        if insert_result[0]:
+            return insert_result[1]
+        else:
+            return "-999999"
 
 
 # This function will check if all the required tables exist and if they don't, will automatically create them
@@ -187,8 +249,18 @@ def db_check_tables():
 
 # This function will search the database to see if the port already exists
 def db_search_port(db_conn, port_id) -> [bool, str]:
-    query = "SELECT ID FROM Port WHERE ID = ?"
+    query = "SELECT ID FROM ports WHERE ID = ?"
     cur = db_conn.execute(query, [port_id])
+    result = cur.fetchone()
+    if result is not None:
+        return [True, result]
+    else:
+        return [False, "Port not found"]
+
+
+def db_search_vessel(db_conn, vessel_imo) -> [bool, str]:
+    query = "SELECT imo FROM vessels WHERE imo = ?"
+    cur = db_conn.execute(query, [vessel_imo])
     result = cur.fetchone()
     if result is not None:
         return [True, result]
@@ -214,18 +286,18 @@ def db_insert_port(db_conn, port_id: str, port_code: int, port_name: str, port_c
     except Exception as e:
         # If there was any error when inserting,
         # then pass a False back with the error for later display back to the user
-        return [False, str(e)]
+        return [False, -999999, str(e)]
 
 
-# This function will search the database to see if the vessel already exists
-def db_search_vessel(db_conn, vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build,
+# This function will insert a vessel into the database
+def db_insert_vessel(db_conn, vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build,
                      vessel_gross, vessel_netto, vessel_length, vessel_beams) -> [bool, str]:
     # Preform the query in a Try-Except to handle errors when inserting data
     # Any errors are reported back to the function that called this function so that we can
     # get an overview of all the errors
     try:
         # Create the insert query
-        query = ("INSERT INTO ports (imo, mmsi, name, country, type, build, gross, netto, length, beam) "
+        query = ("INSERT INTO vessels (imo, mmsi, name, country, type, build, gross, netto, length, beam) "
                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         # Execute the query and get the cursor
         cur = db_conn.execute(query, [vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build,
@@ -237,7 +309,33 @@ def db_search_vessel(db_conn, vessel_imo, vessel_mmsi, vessel_name, vessel_count
     except Exception as e:
         # If there was any error when inserting,
         # then pass a False back with the error for later display back to the user
-        return [False, str(e)]
+        return [False, -999999, str(e)]
+
+
+# This function will insert a shipment into the database
+def db_insert_shipment(db_conn, shipment_trackingnumber, shipment_date, shipment_cargoweight, shipment_distancenaut,
+                       shipment_durationhours, shipment_averagespeed, origin_internal_id, destination_internal_id,
+                       vessel_internal_id) -> [bool, int]:
+    # Preform the query in a Try-Except to handle errors when inserting data
+    # Any errors are reported back to the function that called this function so that we can
+    # get an overview of all the errors
+    try:
+        # Create the insert query
+        query = ("INSERT INTO shipments (id, date, cargo_weight, distance_naut, duration_hours, "
+                 "average_speed, origin, destination, vessel) "
+                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        # Execute the query and get the cursor
+        cur = db_conn.execute(query, [shipment_trackingnumber, shipment_date, shipment_cargoweight,
+                                      shipment_distancenaut, shipment_durationhours, shipment_averagespeed,
+                                      origin_internal_id, destination_internal_id, vessel_internal_id])
+        # Get the ID of the last row we inserted
+        insert_id = cur.lastrowid
+        # Return a True when we did the insert and return it with the ID of our insert
+        return [True, insert_id]
+    except Exception as e:
+        # If there was any error when inserting,
+        # then pass a False back with the error for later display back to the user
+        return [False, -999999, str(e)]
 
 
 if __name__ == "__main__":
