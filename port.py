@@ -1,5 +1,4 @@
 import sqlite3
-from shipment import Shipment
 
 class Port:
 
@@ -27,3 +26,6 @@ class Port:
         cur = db_conn.execute(query, [self.id, self.id])
         # Loop through the results and create Shipment instances with the data and
         for row in cur:
+            print(row)
+        # Close the connection to the database
+        db_conn.close()

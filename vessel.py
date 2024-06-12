@@ -1,7 +1,16 @@
 class Vessel:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, imo: int, mmsi: int, name: str, country: str, type: str, build: int, gross: int, netto: int, length: int, beam: int) -> None:
+        self.imo = imo
+        self.mmsi = mmsi
+        self.name = name
+        self.country = country
+        self.type = type
+        self.build = build
+        self.gross = gross
+        self.netto = netto
+        self.length = length
+        self.beam = beam
 
     # Representation method
     # This will format the output in the correct order

@@ -69,9 +69,11 @@ def print_menu():
     print("================================================")
     print("        Master Assignment - Shipment app")
     print("         A step into the world of cargo")
+    print(" ")
+    print("  Assignment by: Danny de Snoo, HR-nr: 1091749")
     print("================================================")
     print("[I] - Import data")
-    print("[R] - Reporter")
+    print("[R] - Open reporter options")
     print("------------------------------------------------")
     print("[Q] - Exit program")
     print("================================================")
@@ -170,7 +172,7 @@ def import_data(filename: str) -> [bool, dict]:
             # Insert the shipment itself into the database
             internal_shipment_id = db_insert_shipment(db_conn, row_trackingnumber, row_date, row_cargoweight,
                                                       row_distancenaut, row_durationhours, row_averagespeed,
-                                                      "temo", "temp", "tepo")
+                                                      row["origin"]["id"], row["destination"]["id"], row["vessel"]["imo"])
 
             if internal_shipment_id != -999999:
                 temp_list_internal_shipment_ids.append(internal_shipment_id)
