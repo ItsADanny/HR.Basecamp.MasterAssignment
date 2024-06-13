@@ -109,8 +109,12 @@ class Shipment:
         return vessel
 
     def calculate_fuel_costs(self, price_per_liter: float, vessel) -> float:
-        # TODO: Implement the required steps for this function
-        pass
+        # Get the fuel consumption for this Vessel based on the distance of this shipment
+        fuel_needed = vessel.get_fuel_consumption(self.distance_naut)
+        # Calculate how much money it would cost per liter
+        result_calc = price_per_liter * fuel_needed
+        # Return the result
+        return result_calc
 
     def convert_speed(self, to_format: str) -> float:
         # Predefine a return result
@@ -129,11 +133,60 @@ class Shipment:
             # h is time in hours
 
             # now we perform the calculation and put it into our return (result) variable
-            result = shipment_vessel_average_speed * shipment_vessel_duration_hours
-        elif to_format == "Mph":
+            step1_calc = shipment_vessel_average_speed * shipment_vessel_duration_hours
 
+            # Round down the result and put it into our result
+            result = round(step1_calc, 6)
+
+        elif to_format == "Mph":
+            # For calculating m/h, we need 2 variables, The average speed and the duration
+            shipment_vessel_average_speed = self.average_speed
+            shipment_vessel_duration_hours = self.duration_hours
+
+            # The formula for converting nautical miles to km is as followed:
+            # 1.15078 km = 1 nmi x 1.15078 m
+            # m = miles
+            # nmi = nautical miles
+
+            # First, we convert the nautical miles to miles
+            step1_calc = shipment_vessel_average_speed * 1.15078
+
+            # The formula for turning m to m/hr is as followed:
+            # m/hr = m / hr
+            # hr = hour
+            # m = miles
+            # m/hr = miles per hour
+
+            # Second, we calculate the km/hr based on our kms and the duration of our voyage
+            step2_calc = step1_calc * shipment_vessel_duration_hours
+
+            # Round down the result and put it into our result
+            result = round(step2_calc, 6)
 
         elif to_format == "Kmph":
+            # For calculating km/h, we need 2 variables, The average speed and the duration
+            shipment_vessel_average_speed = self.average_speed
+            shipment_vessel_duration_hours = self.duration_hours
+
+            # The formula for converting nautical miles to km is as followed:
+            # 1.852 km = 1 nmi x 1.852 km
+            # km = kilometer
+            # nmi = nautical miles
+
+            # First, we convert the nautical miles to kilometers
+            step1_calc = shipment_vessel_average_speed * 1.852
+
+            # The formula for turning km to km/hr is as followed:
+            # km/hr = km / hr
+            # hr = hour
+            # km = kilometer
+            # km/hr = kilometer per hour
+
+            # Second, we calculate the km/hr based on our kms and the duration of our voyage
+            step2_calc = step1_calc * shipment_vessel_duration_hours
+
+            # Round down the result and put it into our result
+            result = round(step2_calc, 6)
 
         else:
             raise ValueError
@@ -142,5 +195,13 @@ class Shipment:
         return result
 
     def convert_distance(self, to_format: str) -> str:
-        # TODO: Implement the required steps for this function
+        if to_format == "NM":
+        elif to_format == "M":
+        elif to_format == "KM":
+        elif to_format == "MI":
+        elif to_format == "YD":
+        else:
+            raise ValueError
+
+    def convert_duration(self, to_format: str) -> str:
         pass
