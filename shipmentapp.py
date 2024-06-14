@@ -1,13 +1,7 @@
 # Here we import the required Python modules
 import os
-import sys
 import json
 import sqlite3
-
-# Import the classes from the external files
-from vessel import Vessel
-from port import Port
-from shipment import Shipment
 
 # In this variable we store the name for the database file
 database_filename = "shipments.db"

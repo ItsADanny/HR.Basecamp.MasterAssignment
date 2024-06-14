@@ -1,7 +1,5 @@
 import csv
-import os
 import sqlite3
-import sys
 
 from vessel import Vessel
 from port import Port
@@ -225,7 +223,8 @@ class Reporter:
 
             # Create a Vessel class instance with the just retrieved information
             vessel_instance = Vessel(imo_vessel_db, mmsi_vessel_db, name_vessel_db, country_vessel_db, type_vessel_db,
-                                     build_vessel_db, gross_vessel_db, netto_vessel_db, length_vessel_db, beam_vessel_db)
+                                     build_vessel_db, gross_vessel_db, netto_vessel_db, length_vessel_db,
+                                     beam_vessel_db)
 
             # Append the instance to our results' list
             list_results.append(vessel_instance)
@@ -423,7 +422,8 @@ class Reporter:
         db_conn = sqlite3.connect('shipments.db')
 
         # Prepare the query
-        query = "SELECT * FROM vessels WHERE imo = (SELECT vessel FROM shipments WHERE date >= ? AND date <= ? AND origin = ?)"
+        query = ("SELECT * FROM vessels WHERE imo = (SELECT vessel FROM shipments WHERE date >= ? AND date <= ? AND "
+                 "origin = ?)")
 
         # Predefine a list which will hold our vessels from our query results
         list_result_vessels = list()
@@ -448,7 +448,8 @@ class Reporter:
             # If a tuple, Then create Vessel instances
             # If a .csv file, then add these values to a list
             if to_csv:
-                str_csvline = [vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build, vessel_gross, vessel_netto, vessel_length, vessel_beam]
+                str_csvline = [vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build,
+                               vessel_gross, vessel_netto, vessel_length, vessel_beam]
                 # Append the results' list
                 list_result_vessels.append(str_csvline)
             else:
