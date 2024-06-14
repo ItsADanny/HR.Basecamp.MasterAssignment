@@ -201,15 +201,15 @@ class Reporter:
 
         # After we made our dict with the number, we are going to organize them according to which ship
         # has the highest number of shipments
-        organized_dict_vessel_stats = dict(sorted(dict_vessel_stats.items(), key=lambda x: x[1]))
+        organized_dict_vessel_stats = dict(sorted(dict_vessel_stats.items(), key=lambda item: item[1]).reverse())
 
         # Now we prepare a query for getting all the information of the vessel from our database
         vessel_query = "SELECT * FROM vessels WHERE imo = ?"
 
         # Now we iterate through our dict and get the information of the vessel
-        for vessel in organized_dict_vessel_stats.items:
+        for vessel in organized_dict_vessel_stats.items():
             # Execute the query and get the results
-            vessel_result = db_conn.execute(vessel_query, [vessel]).fetchone()
+            vessel_result = db_conn.execute(vessel_query, [vessel[0]]).fetchone()
 
             # Retrieve all the results from our query and put them in the associated variables
             imo_vessel_db = vessel_result[0]
@@ -224,11 +224,11 @@ class Reporter:
             beam_vessel_db = vessel_result[9]
 
             # Create a Vessel class instance with the just retrieved information
-            vessel = Vessel(imo_vessel_db, mmsi_vessel_db, name_vessel_db, country_vessel_db, type_vessel_db,
-                            build_vessel_db, gross_vessel_db, netto_vessel_db, length_vessel_db, beam_vessel_db)
+            vessel_instance = Vessel(imo_vessel_db, mmsi_vessel_db, name_vessel_db, country_vessel_db, type_vessel_db,
+                                     build_vessel_db, gross_vessel_db, netto_vessel_db, length_vessel_db, beam_vessel_db)
 
             # Append the instance to our results' list
-            list_results.append(vessel)
+            list_results.append(vessel_instance)
 
         # Close the connection to the database
         db_conn.close()
@@ -284,15 +284,15 @@ class Reporter:
 
         # After we made our dict with the number, we are going to organize them according to which ship
         # has the highest number of shipments
-        organized_dict_port_stats = dict(sorted(dict_port_stats.items(), key=lambda x: x[1]))
+        organized_dict_port_stats = dict(sorted(dict_port_stats.items(), key=lambda item: item[1]).reverse())
 
         # Now we prepare a query for getting all the information of the vessel from our database
         port_query = "SELECT * FROM ports WHERE id = ?"
 
         # Now we iterate through our dict and get the information of the vessel
-        for port in organized_dict_port_stats.items:
+        for port in organized_dict_port_stats.items():
             # Execute the query and get the results
-            port_result = db_conn.execute(port_query, [port]).fetchone()
+            port_result = db_conn.execute(port_query, [port[0]]).fetchone()
 
             # Retrieve all the results from our query and put them in the associated variables
             id_port_db = port_result[0]
@@ -303,10 +303,11 @@ class Reporter:
             country_port_db = port_result[5]
 
             # Create a Vessel class instance with the just retrieved information
-            port = Port(id_port_db, code_port_db, name_port_db, city_port_db, province_port_db, country_port_db)
+            port_instance = Port(id_port_db, code_port_db, name_port_db, city_port_db, province_port_db,
+                                 country_port_db)
 
             # Append the instance to our results' list
-            list_results.append(port)
+            list_results.append(port_instance)
 
         # Close the connection to the database
         db_conn.close()
@@ -330,7 +331,7 @@ class Reporter:
         if vessel_type is None:
             # Prepare the query
             query = ("SELECT p.id, p.code, p.name, p.city, p.province, p.country FROM shipments s JOIN ports p ON "
-                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo ORDER BY s.date LIMIT 1")
+                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo ORDER BY s.date")
             # Execute the query and retrieve the results
             results_query = db_conn.execute(query)
         else:
@@ -376,7 +377,7 @@ class Reporter:
         if vessel_type is None:
             # Prepare the query
             query = ("SELECT p.id, p.code, p.name, p.city, p.province, p.country FROM shipments s JOIN ports p ON "
-                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo ORDER BY s.date DESC LIMIT 1")
+                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo ORDER BY s.date DESC")
             # Execute the query and retrieve the results
             results_query = db_conn.execute(query)
         else:
@@ -418,7 +419,52 @@ class Reporter:
     #   imo, mmsi, name, country, type, build, gross, netto, length, beam
     def vessels_that_docked_port_between(self, port: Port, start: date, end: date, to_csv: bool = False) \
             -> tuple[Vessel, ...]:
-        raise NotImplemented()
+        # Connect to the database
+        db_conn = sqlite3.connect('shipments.db')
+
+        # Prepare the query
+        query = "SELECT * FROM vessels WHERE imo = (SELECT vessel FROM shipments WHERE date >= ? AND date <= ? AND origin = ?)"
+
+        # Predefine a list which will hold our vessels from our query results
+        list_result_vessels = list()
+
+        # Execute the query
+        results_query = db_conn.execute(query, [start, end, port.id])
+
+        # Iterate through the data
+        for vessel in results_query:
+            vessel_imo = vessel[0]
+            vessel_mmsi = vessel[1]
+            vessel_name = vessel[2]
+            vessel_country = vessel[3]
+            vessel_type = vessel[4]
+            vessel_build = vessel[5]
+            vessel_gross = vessel[6]
+            vessel_netto = vessel[7]
+            vessel_length = vessel[8]
+            vessel_beam = vessel[9]
+
+            # Check if we need to export a tuple or a .csv file
+            # If a tuple, Then create Vessel instances
+            # If a .csv file, then add these values to a list
+            if to_csv:
+                str_csvline = [vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build, vessel_gross, vessel_netto, vessel_length, vessel_beam]
+                # Append the results' list
+                list_result_vessels.append(str_csvline)
+            else:
+                vessel_instance = Vessel(vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type,
+                                         vessel_build, vessel_gross, vessel_netto, vessel_length, vessel_beam)
+                # Append the results' list
+                list_result_vessels.append(vessel_instance)
+
+        if to_csv:
+            format_date_str = "%Y-%m-%d"
+            filename = (f"Vessels docking Port {port.name} between {start.strftime(format_date_str)} and "
+                        f"{end.strftime(format_date_str)}.csv")
+            headers = ['imo', 'mmsi', 'name', 'country', 'type', 'build', 'gross', 'netto', 'length', 'beam']
+            self.create_csv_file(filename, headers, list_result_vessels)
+        else:
+            return tuple(list_result_vessels)
 
     # Which ports are located in country X? ->tuple[Port, ...]
     # Based on given parameter `to_csv = True` should generate CSV file as  `Ports in country X.csv`
@@ -427,7 +473,41 @@ class Reporter:
     # CSV example (this are also the headers):
     #   id, code, name, city, province, country
     def ports_in_country(self, country: str, to_csv: bool = False) -> tuple[Port, ...]:
-        raise NotImplemented()
+        # Connect to the database
+        db_conn = sqlite3.connect('shipments.db')
+        # Prepare the query
+        query = "SELECT * FROM ports WHERE country = ?"
+        # Execute the query
+        results_query = db_conn.execute(query, [country])
+        # Predefine a list where we store our results
+        list_result_country = list()
+        # Iterate through the results
+        for port in results_query:
+            id_port_db = port[0]
+            code_port_db = port[1]
+            name_port_db = port[2]
+            city_port_db = port[3]
+            province_port_db = port[4]
+            country_port_db = port[5]
+
+            if to_csv:
+                # Create the CSV line
+                list_port = [id_port_db, code_port_db, name_port_db, city_port_db, province_port_db, country_port_db]
+                # Append it to the list_result_country
+                list_result_country.append(list_port)
+            else:
+                # Create an instance of the class port
+                port_instance = Port(id_port_db, code_port_db, name_port_db, city_port_db, province_port_db,
+                                     country_port_db)
+                # Append it to the list_result_country
+                list_result_country.append(port_instance)
+
+        if to_csv:
+            filename = f"Ports in country {country}.csv"
+            headers = ['id', 'code', 'name', 'city', 'province', 'country']
+            self.create_csv_file(filename, headers, list_result_country)
+        else:
+            return tuple(list_result_country)
 
     # Which vessels are from country X? -> tuple[Vessel, ...]
     # Based on given parameter `to_csv = True` should generate CSV file as  `Vessels from country X.csv`
@@ -436,4 +516,63 @@ class Reporter:
     # CSV example (this are also the headers):
     #   imo, mmsi, name, country, type, build, gross, netto, length, beam
     def vessels_from_country(self, country: str, to_csv: bool = False) -> tuple[Vessel, ...]:
-        raise NotImplemented()
+        # Connect to the database
+        db_conn = sqlite3.connect('shipments.db')
+
+        # Prepare the query
+        query = "SELECT * FROM vessels WHERE country = ?"
+
+        # Predefine a list which will hold our vessels from our query results
+        list_result_vessels = list()
+
+        # Execute the query
+        results_query = db_conn.execute(query, [country])
+
+        # Iterate through the data
+        for vessel in results_query:
+            vessel_imo = vessel[0]
+            vessel_mmsi = vessel[1]
+            vessel_name = vessel[2]
+            vessel_country = vessel[3]
+            vessel_type = vessel[4]
+            vessel_build = vessel[5]
+            vessel_gross = vessel[6]
+            vessel_netto = vessel[7]
+            vessel_length = vessel[8]
+            vessel_beam = vessel[9]
+
+            # Check if we need to export a tuple or a .csv file
+            # If a tuple, Then create Vessel instances
+            # If a .csv file, then add these values to a list
+            if to_csv:
+                str_csvline = [vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type, vessel_build,
+                               vessel_gross, vessel_netto, vessel_length, vessel_beam]
+                # Append the results' list
+                list_result_vessels.append(str_csvline)
+            else:
+                vessel_instance = Vessel(vessel_imo, vessel_mmsi, vessel_name, vessel_country, vessel_type,
+                                         vessel_build, vessel_gross, vessel_netto, vessel_length, vessel_beam)
+                # Append the results' list
+                list_result_vessels.append(vessel_instance)
+
+        if to_csv:
+            filename = (f"Vessels from country {country}.csv")
+            headers = ['imo', 'mmsi', 'name', 'country', 'type', 'build', 'gross', 'netto', 'length', 'beam']
+            self.create_csv_file(filename, headers, list_result_vessels)
+        else:
+            return tuple(list_result_vessels)
+
+    def create_csv_file(self, filename: str, headers: list, data: list):
+        # # Create the file and open it in WRITE MODE
+        # file = open(filename, "w")
+        # # Write the csv headers to the file
+        # file.write(headers)
+        # # Write the data to the csv file
+        # file.writelines(data)
+        # # Close the file
+        # file.close()
+
+        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+            vessel_writer = csv.writer(csvfile, delimiter=',')
+            vessel_writer.writerow(headers)
+            vessel_writer.writerows(sorted(data, key=lambda x: x[0]))

@@ -3,7 +3,8 @@ import sqlite3
 
 class Vessel:
 
-    def __init__(self, imo: int, mmsi: int, name: str, country: str, type: str, build: int, gross: int, netto: int, length: int, beam: int) -> None:
+    def __init__(self, imo: int, mmsi: int, name: str, country: str, type: str, build: int, gross: int, netto: int,
+                 length: int, beam: int) -> None:
         self.imo = imo
         self.mmsi = mmsi
         self.name = name
@@ -19,7 +20,8 @@ class Vessel:
     # This will format the output in the correct order
     # Format is @dataclass-style: Classname(attr=value, attr2=value2, ...)
     def __repr__(self) -> str:
-        return "{}({})".format(type(self).__name__, ", ".join([f"{key}={value!s}" for key, value in self.__dict__.items()]))
+        return "{}({})".format(type(self).__name__, ", ".join([f"{key}={value!s}" for
+                                                               key, value in self.__dict__.items()]))
 
     # This function will return a float with the fuel consumption of this vessel per a certain inputted distance
     def get_fuel_consumption(self, distance: float) -> float:
@@ -57,6 +59,8 @@ class Vessel:
 
     # This function will return a tuple with the shipments for this vessel
     def get_shipments(self):
+        from shipment import Shipment
+
         # Get the imo of the vessel from our shipment
         imo_vessel = self.imo
 

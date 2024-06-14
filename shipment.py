@@ -129,9 +129,6 @@ class Shipment:
         return result_calc
 
     def convert_speed(self, to_format: str) -> float:
-        # Predefine a return result
-        result = 0.0
-
         # Check to see if the to_format has a valid format, If not then raise an ValueError
         if to_format == "Knts":
             # For calculating knots we need 2 variables, The average speed and the duration
@@ -169,7 +166,7 @@ class Shipment:
             # m = miles
             # m/hr = miles per hour
 
-            # Second, we calculate the km/hr based on our kms and the duration of our voyage
+            # Second, we calculate the m/hr based on our kms and the duration of our voyage
             step2_calc = step1_calc * shipment_vessel_duration_hours
 
             # Round down the result and put it into our result
@@ -222,14 +219,14 @@ class Shipment:
 
     def convert_duration(self, to_format: str) -> str:
         # convert the duration of the shipment into multiple parts (Days, Hours and Minutes)
-        days = self.duration_hours
+        days = self.duration_hours / 24
         hours = self.duration_hours // 3600
         minutes = self.duration_hours * 60
 
         # Use the inputted format and insert our days, hours and minutes
-        step1 = to_format.replace("%D", days)
-        step2 = step1.replace("%H", hours)
-        step3 = step2.replace("%M", minutes)
+        step1 = to_format.replace("%D", str(days))
+        step2 = step1.replace("%H", str(hours))
+        step3 = step2.replace("%M", str(minutes))
 
         # Return the format
         return step3
