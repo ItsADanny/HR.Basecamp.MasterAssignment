@@ -103,7 +103,7 @@ def json_get_filedata(filename: str) -> [bool, str, dict]:
         # create the results with the JSON data
         return_result = [True, "JSON data loaded", json_data]
     else:
-        # create the results with a empty dict and a "File not found" message
+        # create the results with an empty dict and a "File not found" message
         return_result = [False, "File not found", dict()]
 
     # Send back the result
@@ -145,41 +145,17 @@ def import_data(filename: str) -> [bool, dict]:
             # Import the data from the rows: Origin, Destination and Vessel.
             # If the data for these is already known, then we just return their current ID from the database
             # Else we insert the data and return their newly created ID
-            origin_internal_id = import_data_port(db_conn, row_origin)
-            destination_internal_id = import_data_port(db_conn, row_destination)
-            vessel_internal_id = import_data_vessel(db_conn, row_vessel)
-
-            if origin_internal_id != -999999 and destination_internal_id != -999999 and vessel_internal_id != -999999:
-                return_result[1]["succesfull_inserts"] += 1
-            else:
-                if origin_internal_id == "-999999":
-                    return_result[1]["unsuccesfull_inserts"] += 1
-                    return_result[1]["errors"].append(f"There was an error trying to insert/update port (origin) "
-                                                      f"[{row["origin"]["id"]}] for shipment "
-                                                      f"[{row["tracking_number"]}]")
-                if destination_internal_id == "-999999":
-                    return_result[1]["unsuccesfull_inserts"] += 1
-                    return_result[1]["succesfull_inserts"] += 1
-                    return_result[1]["errors"].append(f"There was an error trying to insert/update port (destination) "
-                                                      f"[{row["destination"]["id"]}] for shipment "
-                                                      f"[{row["tracking_number"]}]")
-                if vessel_internal_id == "-999999":
-                    return_result[1]["unsuccesfull_inserts"] += 1
-                    return_result[1]["errors"].append(f"There was an error trying to insert/update vessel "
-                                                      f"[{row["vessel"]["imo"]}] for shipment "
-                                                      f"[{row["tracking_number"]}]")
+            import_data_port(db_conn, row_origin)
+            import_data_port(db_conn, row_destination)
+            import_data_vessel(db_conn, row_vessel)
 
             # Insert the shipment itself into the database
             internal_shipment_id = db_insert_shipment(db_conn, row_trackingnumber, row_date, row_cargoweight,
                                                       row_distancenaut, row_durationhours, row_averagespeed,
-                                                      row["origin"]["id"], row["destination"]["id"], row["vessel"]["imo"])
+                                                      row["origin"]["id"], row["destination"]["id"],
+                                                      row["vessel"]["imo"])
 
-            if internal_shipment_id != -999999:
-                temp_list_internal_shipment_ids.append(internal_shipment_id)
-            else:
-                return_result[1]["unsuccesfull_inserts"] += 1
-                return_result[1]["errors"].append(f"There was an error trying to insert/update vessel "
-                                                  f"[{row["vessel"]["imo"]}] for shipment [{row["tracking_number"]}]")
+            temp_list_internal_shipment_ids.append(internal_shipment_id)
 
         # Check if the amount of internal_shipment_id's is the same as the amount of records
         if len(json_data[2]) == len(temp_list_internal_shipment_ids):
@@ -341,8 +317,12 @@ def db_insert_shipment(db_conn, shipment_trackingnumber, shipment_date, shipment
 
 
 if __name__ == "__main__":
-    # This function will check if the database exists,
-    # and will if not create the database file and all the required tables needed
-    db_check_tables()
-    # This function is for the main part of this application
-    main()
+    # Turn this on to use the interface
+    # # This function will check if the database exists,
+    # # and will if not create the database file and all the required tables needed
+    # db_check_tables()
+    # # This function is for the main part of this application
+    # main()
+
+    # Use this when running in codegrade
+    import_data("shipments.json")

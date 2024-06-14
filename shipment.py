@@ -1,9 +1,11 @@
 from datetime import date
 import sqlite3
 
+
 class Shipment:
 
-    def __init__(self, id: str, date: date, cargo_weight: int, distance_naut: float, duration_hours: float, average_speed: float, origin: str, destination: str, vessel: int) -> None:
+    def __init__(self, id: str, date: date, cargo_weight: int, distance_naut: float, duration_hours: float,
+                 average_speed: float, origin: str, destination: str, vessel: int) -> None:
         self.id = id
         self.date = date
         self.cargo_weight = cargo_weight
@@ -18,9 +20,13 @@ class Shipment:
     # This will format the output in the correct order
     # Format is @dataclass-style: Classname(attr=value, attr2=value2, ...)
     def __repr__(self) -> str:
-        return "{}({})".format(type(self).__name__, ", ".join([f"{key}={value!s}" for key, value in self.__dict__.items()]))
+        return "{}({})".format(type(self).__name__,
+                               ", ".join([f"{key}={value!s}" for key, value in self.__dict__.items()]))
 
     def get_ports(self) -> dict:
+        # Import the port class
+        from port import Port
+
         # Retrieve the ID of the Origin and Destination of the shipment
         id_origin = self.origin
         id_destination = self.destination
@@ -46,7 +52,8 @@ class Shipment:
         country_origin_port_db = origin_port_info[5]
 
         # Create an instance of the class port for the origin with the just collected data
-        port_origin = Port(id_origin_port_db, code_origin_port_db, name_origin_port_db, city_origin_port_db, province_origin_port_db, country_origin_port_db)
+        port_origin = Port(id_origin_port_db, code_origin_port_db, name_origin_port_db, city_origin_port_db,
+                           province_origin_port_db, country_origin_port_db)
 
         # Execute the query for the Destination
         cur_destination = db_conn.execute(query, [id_destination])
@@ -63,7 +70,8 @@ class Shipment:
         country_destination_port_db = destination_port_info[5]
 
         # Create an instance of the class port for the origin with the just collected data
-        port_destination = Port(id_destination_port_db, code_destination_port_db, name_destination_port_db, city_destination_port_db, province_destination_port_db, country_destination_port_db)
+        port_destination = Port(id_destination_port_db, code_destination_port_db, name_destination_port_db,
+                                city_destination_port_db, province_destination_port_db, country_destination_port_db)
 
         # Close the connection to the database
         db_conn.close()
@@ -72,6 +80,9 @@ class Shipment:
         return {id_origin: port_origin, id_destination: port_destination}
 
     def get_vessel(self):
+        # Import the class
+        from vessel import Vessel
+
         # Get the imo of the vessel from our shipment
         imo_vessel = self.vessel
 
@@ -100,7 +111,8 @@ class Shipment:
         beam_vessel_db = vessel_info[9]
 
         # Create an instance of the class Vessel for the vessel with the just collected data
-        vessel = Vessel(imo_vessel_db, mmsi_vessel_db, name_vessel_db, country_vessel_db, type_vessel_db, build_vessel_db, gross_vessel_db, netto_vessel_db, length_vessel_db, beam_vessel_db)
+        vessel = Vessel(imo_vessel_db, mmsi_vessel_db, name_vessel_db, country_vessel_db, type_vessel_db,
+                        build_vessel_db, gross_vessel_db, netto_vessel_db, length_vessel_db, beam_vessel_db)
 
         # Close the connection to the database
         db_conn.close()
@@ -194,14 +206,30 @@ class Shipment:
         # Return the result
         return result
 
-    def convert_distance(self, to_format: str) -> str:
+    def convert_distance(self, to_format: str) -> float:
         if to_format == "NM":
+            return round(self.distance_naut * 1, 6)
         elif to_format == "M":
+            return round(self.distance_naut * 1852, 6)
         elif to_format == "KM":
+            return round(self.distance_naut * 1.852, 6)
         elif to_format == "MI":
+            return round(self.distance_naut * 1.15078, 6)
         elif to_format == "YD":
+            return round(self.distance_naut * 2025.37183, 6)
         else:
             raise ValueError
 
     def convert_duration(self, to_format: str) -> str:
-        pass
+        # convert the duration of the shipment into multiple parts (Days, Hours and Minutes)
+        days = self.duration_hours
+        hours = self.duration_hours // 3600
+        minutes = self.duration_hours * 60
+
+        # Use the inputted format and insert our days, hours and minutes
+        step1 = to_format.replace("%D", days)
+        step2 = step1.replace("%H", hours)
+        step3 = step2.replace("%M", minutes)
+
+        # Return the format
+        return step3

@@ -50,7 +50,9 @@ class Reporter:
         db_shipment_vessel = result[8]
 
         # Create a shipment instance
-        shipment = Shipment(db_shipment_id, db_shipment_date, db_shipment_cargo_weight, db_shipment_distance_naut, db_shipment_duration_hours, db_shipment_average_speed, db_shipment_origin, db_shipment_destination, db_shipment_vessel)
+        shipment = Shipment(db_shipment_id, db_shipment_date, db_shipment_cargo_weight, db_shipment_distance_naut,
+                            db_shipment_duration_hours, db_shipment_average_speed, db_shipment_origin,
+                            db_shipment_destination, db_shipment_vessel)
 
         # Return the shipment instance
         return shipment
@@ -105,7 +107,7 @@ class Reporter:
                                 db_longest_vessel_beam)
 
         # Create a tuple that contains both instances
-        tuple_results = (vessel_shortest, vessel_longest)
+        tuple_results = (vessel_longest, vessel_shortest)
 
         # Close the database connection
         db_conn.close()
@@ -163,7 +165,7 @@ class Reporter:
                                db_widest_vessel_beam)
 
         # Create a tuple that contains both instances
-        tuple_results = (vessel_smallest, vessel_widest)
+        tuple_results = (vessel_widest, vessel_smallest)
 
         # Close the database connection
         db_conn.close()
@@ -173,21 +175,239 @@ class Reporter:
 
     # Which vessels have the most shipments -> tuple[Vessel, ...]
     def vessels_with_the_most_shipments(self) -> tuple[Vessel, ...]:
-        raise NotImplemented()
+        # Create an empty dict in which we will count the number of shipments for a certain vessel
+        dict_vessel_stats = dict()
+
+        # Create an empty list in which we will store the results that will be turned into a tuple
+        list_results = list()
+
+        # Connect to the database
+        db_conn = sqlite3.connect('shipments.db')
+
+        # Prepare a query for getting the vessel for all the shipments from the database
+        shipments_query = "SELECT vessel FROM shipments"
+
+        # Execute the query and get the results
+        results_shipments_query = db_conn.execute(shipments_query)
+
+        # Iterate through all the results and check if the vessel already exists in the dict.
+        # If it does, then add 1 to the vessels counter
+        # Else create it and start it at 1
+        for vessel in results_shipments_query:
+            if vessel[0] not in dict_vessel_stats:
+                dict_vessel_stats[vessel[0]] = 1
+            else:
+                dict_vessel_stats[vessel[0]] += 1
+
+        # After we made our dict with the number, we are going to organize them according to which ship
+        # has the highest number of shipments
+        organized_dict_vessel_stats = dict(sorted(dict_vessel_stats.items(), key=lambda x: x[1]))
+
+        # Now we prepare a query for getting all the information of the vessel from our database
+        vessel_query = "SELECT * FROM vessels WHERE imo = ?"
+
+        # Now we iterate through our dict and get the information of the vessel
+        for vessel in organized_dict_vessel_stats.items:
+            # Execute the query and get the results
+            vessel_result = db_conn.execute(vessel_query, [vessel]).fetchone()
+
+            # Retrieve all the results from our query and put them in the associated variables
+            imo_vessel_db = vessel_result[0]
+            mmsi_vessel_db = vessel_result[1]
+            name_vessel_db = vessel_result[2]
+            country_vessel_db = vessel_result[3]
+            type_vessel_db = vessel_result[4]
+            build_vessel_db = vessel_result[5]
+            gross_vessel_db = vessel_result[6]
+            netto_vessel_db = vessel_result[7]
+            length_vessel_db = vessel_result[8]
+            beam_vessel_db = vessel_result[9]
+
+            # Create a Vessel class instance with the just retrieved information
+            vessel = Vessel(imo_vessel_db, mmsi_vessel_db, name_vessel_db, country_vessel_db, type_vessel_db,
+                            build_vessel_db, gross_vessel_db, netto_vessel_db, length_vessel_db, beam_vessel_db)
+
+            # Append the instance to our results' list
+            list_results.append(vessel)
+
+        # Close the connection to the database
+        db_conn.close()
+
+        # Turn the list into a tuple
+        tuple_results = tuple(list_results)
+
+        # Return the tuple
+        return tuple_results
 
     # Which ports have the most shipments -> tuple[Port, ...]
     def ports_with_most_shipments(self) -> tuple[Port, ...]:
-        raise NotImplemented()
+        # Create an empty dict in which we will count the number of shipments for a certain port
+        dict_port_stats = dict()
+
+        # Create an empty list in which we will store the results that will be turned into a tuple
+        list_results = list()
+
+        # Connect to the database
+        db_conn = sqlite3.connect('shipments.db')
+
+        # Prepare a query for getting the origin for all the shipments from the database
+        origin_query = "SELECT origin FROM shipments"
+
+        # Execute the query and get the results
+        results_origin_query = db_conn.execute(origin_query)
+
+        # Iterate through all the results and check if the vessel already exists in the dict.
+        # If it does, then add 1 to the vessels counter
+        # Else create it and start it at 1
+        for port in results_origin_query:
+            if port[0] not in dict_port_stats:
+                dict_port_stats[port[0]] = 1
+            else:
+                dict_port_stats[port[0]] += 1
+
+        # After we did the query for the origin, now we must do one for the destination
+
+        # Prepare a query for getting the destination for all the shipments from the database
+        destination_query = "SELECT destination FROM shipments"
+
+        # Execute the query and get the results
+        results_destination_query = db_conn.execute(destination_query)
+
+        # Iterate through all the results and check if the vessel already exists in the dict.
+        # If it does, then add 1 to the vessels counter
+        # Else create it and start it at 1
+        for port in results_destination_query:
+            if port[0] not in dict_port_stats:
+                dict_port_stats[port[0]] = 1
+            else:
+                dict_port_stats[port[0]] += 1
+
+        # After we made our dict with the number, we are going to organize them according to which ship
+        # has the highest number of shipments
+        organized_dict_port_stats = dict(sorted(dict_port_stats.items(), key=lambda x: x[1]))
+
+        # Now we prepare a query for getting all the information of the vessel from our database
+        port_query = "SELECT * FROM ports WHERE id = ?"
+
+        # Now we iterate through our dict and get the information of the vessel
+        for port in organized_dict_port_stats.items:
+            # Execute the query and get the results
+            port_result = db_conn.execute(port_query, [port]).fetchone()
+
+            # Retrieve all the results from our query and put them in the associated variables
+            id_port_db = port_result[0]
+            code_port_db = port_result[1]
+            name_port_db = port_result[2]
+            city_port_db = port_result[3]
+            province_port_db = port_result[4]
+            country_port_db = port_result[5]
+
+            # Create a Vessel class instance with the just retrieved information
+            port = Port(id_port_db, code_port_db, name_port_db, city_port_db, province_port_db, country_port_db)
+
+            # Append the instance to our results' list
+            list_results.append(port)
+
+        # Close the connection to the database
+        db_conn.close()
+
+        # Turn the list into a tuple
+        tuple_results = tuple(list_results)
+
+        # Return the tuple
+        return tuple_results
 
     # Which ports (origin) had the first shipment? -> tuple[Port, ...]:
     # Which ports (origin) had the first shipment of a specific vessel type?  -> tuple[Port, ...]:
     def ports_with_first_shipment(self, vessel_type: str = None) -> tuple[Port, ...]:
-        raise NotImplemented()
+        # Predefine a list variable which we will later turn into a tuple
+        list_results = list()
+
+        # Make a connection to the database
+        db_conn = sqlite3.connect('shipments.db')
+
+        # Check to see if there is a vessel type given
+        if vessel_type is None:
+            # Prepare the query
+            query = ("SELECT p.id, p.code, p.name, p.city, p.province, p.country FROM shipments s JOIN ports p ON "
+                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo ORDER BY s.date LIMIT 1")
+            # Execute the query and retrieve the results
+            results_query = db_conn.execute(query)
+        else:
+            # Prepare the query
+            query = ("SELECT p.id, p.code, p.name, p.city, p.province, p.country FROM shipments s JOIN ports p ON "
+                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo WHERE v.type = ? ORDER BY s.date LIMIT 1")
+            # Execute the query and retrieve the results
+            results_query = db_conn.execute(query, [vessel_type])
+
+        # Use the results to make Port class instances
+        for port in results_query:
+            # Get the data and put it in the associated variable
+            id_port_db = port[0]
+            code_port_db = port[1]
+            name_port_db = port[2]
+            city_port_db = port[3]
+            province_port_db = port[4]
+            country_port_db = port[5]
+
+            # Create the instance
+            port_instance = Port(id_port_db, code_port_db, name_port_db, city_port_db, province_port_db,
+                                 country_port_db)
+
+            # Add the instance to the list
+            list_results.append(port_instance)
+
+        # Close the connection to the database
+        db_conn.close()
+
+        # Return the results as a tuple
+        return tuple(list_results)
 
     # Which ports (origin) had the latest shipment? -> tuple[Port, ...]:
     # Which ports (origin) had the latetst shipment of a specific vessel type? -> tuple[Port, ...]:
     def ports_with_latest_shipment(self, vessel_type: str = None) -> tuple[Port, ...]:
-        raise NotImplemented()
+        # Predefine a list variable which we will later turn into a tuple
+        list_results = list()
+
+        # Make a connection to the database
+        db_conn = sqlite3.connect('shipments.db')
+
+        # Check to see if there is a vessel type given
+        if vessel_type is None:
+            # Prepare the query
+            query = ("SELECT p.id, p.code, p.name, p.city, p.province, p.country FROM shipments s JOIN ports p ON "
+                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo ORDER BY s.date DESC LIMIT 1")
+            # Execute the query and retrieve the results
+            results_query = db_conn.execute(query)
+        else:
+            # Prepare the query
+            query = ("SELECT p.id, p.code, p.name, p.city, p.province, p.country FROM shipments s JOIN ports p ON "
+                     "s.origin = p.id JOIN vessels v ON s.vessel = v.imo WHERE v.type = ? ORDER BY s.date DESC LIMIT 1")
+            # Execute the query and retrieve the results
+            results_query = db_conn.execute(query, [vessel_type])
+
+        # Use the results to make Port class instances
+        for port in results_query:
+            # Get the data and put it in the associated variable
+            id_port_db = port[0]
+            code_port_db = port[1]
+            name_port_db = port[2]
+            city_port_db = port[3]
+            province_port_db = port[4]
+            country_port_db = port[5]
+
+            # Create the instance
+            port_instance = Port(id_port_db, code_port_db, name_port_db, city_port_db, province_port_db,
+                                 country_port_db)
+
+            # Add the instance to the list
+            list_results.append(port_instance)
+
+        # Close the connection to the database
+        db_conn.close()
+
+        # Return the results as a tuple
+        return tuple(list_results)
 
     # Which vessels have docked port Z between period X and Y? -> tuple[Vessel, ...]
     # Based on given parameter `to_csv = True` should generate CSV file as  `Vessels docking Port Z between X and Y.csv`
